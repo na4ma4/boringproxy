@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/caddyserver/certmagic"
+	"github.com/libdns/route53"
 )
 
 type Config struct {
@@ -41,6 +42,9 @@ func Listen() {
 	adminDomain := flagSet.String("admin-domain", "", "Admin Domain")
 	sshServerPort := flagSet.Int("ssh-server-port", 22, "SSH Server Port")
 	certDir := flagSet.String("cert-dir", "", "TLS cert directory")
+	adminEmail := flagSet.String("admin-email", "", "Admin Email (for Lets Encrypt)")
+	route53AccessKey := flagSet.String("aws-access-key", "", "Route53 AWS Access Key")
+	route53SecretKey := flagSet.String("aws-secret-key", "", "Route53 AWS Secret Key")
 	err := flagSet.Parse(os.Args[2:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: parsing flags: %s\n", os.Args[0], err)
@@ -65,6 +69,18 @@ func Listen() {
 	certmagic.DefaultACME.DisableHTTPChallenge = true
 	if *certDir != "" {
 		certmagic.Default.Storage = &certmagic.FileStorage{*certDir}
+	}
+	if *adminEmail != "" {
+		certmagic.DefaultACME.Email = *adminEmail
+	}
+	if *route53AccessKey != "" && *route53SecretKey != "" {
+		certmagic.DefaultACME.DisableTLSALPNChallenge = true
+		certmagic.DefaultACME.DNS01Solver = &certmagic.DNS01Solver{
+			DNSProvider: &route53.Provider{
+				AccessKeyId:     *route53AccessKey,
+				SecretAccessKey: *route53SecretKey,
+			},
+		}
 	}
 	//certmagic.DefaultACME.DisableTLSALPNChallenge = true
 	//certmagic.DefaultACME.CA = certmagic.LetsEncryptStagingCA

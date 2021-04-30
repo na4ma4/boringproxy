@@ -12,8 +12,13 @@ COPY . .
 RUN rice embed-go
 RUN cd cmd/boringproxy && CGO_ENABLED=0 go build -o boringproxy
 
+FROM alpine:3.13 as certs
+RUN apk --update add ca-certificates
+
 FROM scratch 
 EXPOSE 80 443
+
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 COPY --from=builder /build/cmd/boringproxy/boringproxy /
 
